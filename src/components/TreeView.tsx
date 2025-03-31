@@ -1,87 +1,256 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import TreeItem from "@/components/TreeItem";
+import { TreeNode } from "@/types/tree";
+import { treeService } from "@/services/treeService";
+import Dialog from "@/components/Dialog";
 
-interface TreeNode {
-    id: number;
-    name: string;
-    children: TreeNode[];
-}
-
-export interface TreeItemProps {
+interface TreeViewProps {
     treeName: string;
-    node: TreeNode;
-    onAddChild: (parentId: number, nodeName: string) => Promise<void>;
-    onDelete: (treeName: string, nodeId: number) => Promise<void>;
-    onRename: (
-        treeName: string,
-        nodeId: number,
-        newName: string,
-    ) => Promise<void>;
 }
 
-const TreeView = () => {
-    const [treeData, setTreeData] = useState<TreeNode | null>(null);
-    const [treeName] = useState<string>(
-        "jdhfgljfdhljk-asdjewurhgwekrgdjksf-cxvdfsvsdf",
-    );
+const findAndUpdateNode = (
+    nodes: TreeNode[],
+    nodeId: number,
+    updateFn: (node: TreeNode) => TreeNode,
+): [TreeNode[], boolean] => {
+    let updated = false;
 
-    const fetchTree = async () => {
-        try {
-            const response = await axios.post(
-                `https://test.vmarmysh.com/api.user.tree.get?treeName=${treeName}`,
+    const updateNodes = (nodes: TreeNode[]): TreeNode[] => {
+        return nodes.map((node) => {
+            if (node.id === nodeId) {
+                updated = true;
+                return updateFn(node);
+            }
+
+            if (node.children && node.children.length > 0) {
+                const [updatedChildren, childUpdated] = findAndUpdateNode(
+                    node.children,
+                    nodeId,
+                    updateFn,
+                );
+                if (childUpdated) {
+                    updated = true;
+                    return { ...node, children: updatedChildren };
+                }
+            }
+
+            return node;
+        });
+    };
+
+    return [updateNodes(nodes), updated];
+};
+
+const findAndRemoveNode = (
+    nodes: TreeNode[],
+    nodeId: number,
+): [TreeNode[], boolean] => {
+    let removed = false;
+
+    const updatedNodes = nodes
+        .map((node) => {
+            if (node.id === nodeId) {
+                removed = true;
+                return null;
+            }
+
+            const [filteredChildren, childRemoved] = findAndRemoveNode(
+                node.children || [],
+                nodeId,
             );
-            setTreeData(response.data);
-            console.log(response.data);
+            if (childRemoved) {
+                removed = true;
+                return { ...node, children: filteredChildren };
+            }
+
+            return node;
+        })
+        .filter((node): node is TreeNode => node !== null);
+
+    return [updatedNodes, removed];
+};
+
+const findAndAddChild = (
+    nodes: TreeNode[],
+    parentId: number,
+    newChild: TreeNode,
+): [TreeNode[], boolean] => {
+    let added = false;
+
+    const updateNodes = (nodes: TreeNode[]): TreeNode[] => {
+        return nodes.map((node) => {
+            if (node.id === parentId) {
+                added = true;
+                return {
+                    ...node,
+                    children: [...(node.children || []), newChild],
+                };
+            }
+
+            if (node.children && node.children.length > 0) {
+                const [updatedChildren, childAdded] = findAndAddChild(
+                    node.children,
+                    parentId,
+                    newChild,
+                );
+                if (childAdded) {
+                    added = true;
+                    return { ...node, children: updatedChildren };
+                }
+            }
+
+            return node;
+        });
+    };
+
+    return [updateNodes(nodes), added];
+};
+
+const findNodeById = (nodes: TreeNode[], nodeId: number): TreeNode | null => {
+    for (const node of nodes) {
+        if (node.id === nodeId) {
+            return node;
+        }
+
+        if (node.children && node.children.length > 0) {
+            const foundNode = findNodeById(node.children, nodeId);
+            if (foundNode) {
+                return foundNode;
+            }
+        }
+    }
+
+    return null;
+};
+
+const TreeView = ({ treeName }: TreeViewProps) => {
+    const [treeData, setTreeData] = useState<TreeNode | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    const fetchTree = useCallback(async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const data = await treeService.getTree(treeName);
+            setTreeData(data);
         } catch (error) {
             console.error("Failed to fetch tree:", error);
+            setError("Failed to load tree data. Please try again later.");
+        } finally {
+            setLoading(false);
         }
-    };
+    }, [treeName]);
 
-    const handleAddChild = async (parentNodeId: number, nodeName: string) => {
-        const props = new URLSearchParams();
-        props.append("treeName", treeName);
-        props.append("parentNodeId", parentNodeId.toString());
-        props.append("nodeName", nodeName);
+    const handleAddChild = useCallback(
+        async (parentNodeId: number, nodeName: string) => {
+            if (!treeData) return;
 
-        const response = await axios.post(
-            `https://test.vmarmysh.com/api.user.tree.node.create?${props.toString()}`,
-        );
-        if (response.status === 200) {
-            fetchTree();
-        }
-    };
+            const tempId = Date.now();
 
-    const handleDelete = async (treeName: string, nodeId: number) => {
-        const props = new URLSearchParams();
-        props.append("treeName", treeName);
-        props.append("nodeId", nodeId.toString());
+            const newNode: TreeNode = {
+                id: tempId,
+                name: nodeName,
+                children: [],
+            };
 
-        const response = await axios.post(
-            `https://test.vmarmysh.com/api.user.tree.node.delete?${props.toString()}`,
-        );
-        if (response.status === 200) {
-            fetchTree();
-        }
-    };
+            const [updatedTree, added] = findAndAddChild(
+                [treeData],
+                parentNodeId,
+                newNode,
+            );
 
-    const handleRename = async (
-        treeName: string,
-        nodeId: number,
-        newNodeName: string,
-    ) => {
-        const props = new URLSearchParams();
-        props.append("treeName", treeName);
-        props.append("nodeId", nodeId.toString());
-        props.append("newNodeName", newNodeName);
+            if (added) {
+                setTreeData(updatedTree[0]);
 
-        const response = await axios.post(
-            `https://test.vmarmysh.com/api.user.tree.node.rename?${props.toString()}`,
-        );
-        if (response.status === 200) {
-            fetchTree();
-        }
-    };
+                try {
+                    const result = await treeService.addNode(
+                        treeName,
+                        parentNodeId,
+                        nodeName,
+                    );
+
+                    if (result.success) {
+                        await fetchTree();
+                    } else {
+                        await fetchTree();
+                    }
+                } catch (error) {
+                    await fetchTree();
+                }
+            }
+        },
+        [treeName, treeData, fetchTree],
+    );
+
+    const handleDelete = useCallback(
+        async (treeName: string, nodeId: number) => {
+            if (!treeData) return;
+
+            const nodeToDelete = findNodeById([treeData], nodeId);
+            if (!nodeToDelete) {
+                return;
+            }
+
+            const [updatedTree, removed] = findAndRemoveNode(
+                [treeData],
+                nodeId,
+            );
+
+            console.log(updatedTree, removed);
+            if (removed) {
+                setTreeData(updatedTree[0]);
+
+                try {
+                    const result = await treeService.deleteNodeRecursive(
+                        treeName,
+                        nodeToDelete,
+                    );
+                    if (!result.success) {
+                        await fetchTree();
+                    }
+                } catch (error) {
+                    await fetchTree();
+                }
+            }
+        },
+        [treeName, treeData, fetchTree],
+    );
+
+    const handleRename = useCallback(
+        async (treeName: string, nodeId: number, newNodeName: string) => {
+            if (!treeData) return;
+
+            const [updatedTree, updated] = findAndUpdateNode(
+                [treeData],
+                nodeId,
+                (node) => ({
+                    ...node,
+                    name: newNodeName,
+                }),
+            );
+
+            if (updated) {
+                setTreeData(updatedTree[0]);
+
+                try {
+                    const result = await treeService.renameNode(
+                        treeName,
+                        nodeId,
+                        newNodeName,
+                    );
+
+                    if (!result.success) {
+                        await fetchTree();
+                    }
+                } catch (error) {
+                    await fetchTree();
+                }
+            }
+        },
+        [treeName, treeData, fetchTree],
+    );
 
     useEffect(() => {
         fetchTree();
@@ -90,17 +259,14 @@ const TreeView = () => {
     if (!treeData) return <div>Loading...</div>;
 
     return (
-        <div>
-            <ul>
-                <TreeItem
-                    treeName={treeName}
-                    node={treeData}
-                    onAddChild={handleAddChild}
-                    onRename={handleRename}
-                    onDelete={handleDelete}
-                />
-            </ul>
-        </div>
+        <TreeItem
+            treeName={treeName}
+            node={treeData}
+            onAddChild={handleAddChild}
+            onRename={handleRename}
+            onDelete={handleDelete}
+            isRoot
+        />
     );
 };
 

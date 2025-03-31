@@ -1,5 +1,28 @@
-import { TreeItemProps } from "@/components/TreeView";
+import Dialog, { DialogType } from "@/components/Dialog";
+import { TreeNode } from "@/types/tree";
+import { getHooks } from "html-webpack-plugin";
 import { useState } from "react";
+import {
+    FaCaretDown,
+    FaCaretRight,
+    FaEdit,
+    FaPlus,
+    FaTrash,
+} from "react-icons/fa";
+import styles from "@/components/TreeItem.module.scss";
+
+interface TreeItemProps {
+    treeName: string;
+    node: TreeNode;
+    onAddChild: (parentId: number, nodeName: string) => Promise<void>;
+    onDelete: (treeName: string, nodeId: number) => Promise<void>;
+    onRename: (
+        treeName: string,
+        nodeId: number,
+        newName: string,
+    ) => Promise<void>;
+    isRoot?: boolean;
+}
 
 const TreeItem = ({
     node,
@@ -7,62 +30,111 @@ const TreeItem = ({
     onRename,
     onDelete,
     treeName,
+    isRoot = false,
 }: TreeItemProps) => {
     const [isExpanded, setIsExpanded] = useState(false);
+    const [dialogType, setDialogType] = useState<DialogType | null>(null);
+
+    const handleAddChild = async (nodeName?: string) => {
+        if (!nodeName) return;
+        await onAddChild(node.id, nodeName);
+        setIsExpanded(true);
+    };
+
+    const handleRename = async (newName?: string) => {
+        if (!newName) return;
+        await onRename(treeName, node.id, newName);
+    };
+
+    const handleDelete = async () => {
+        await onDelete(treeName, node.id);
+    };
+
+    const getDialogHandler = () => {
+        switch (dialogType) {
+            case "add":
+                return handleAddChild;
+            case "rename":
+                return handleRename;
+            case "delete":
+                return handleDelete;
+            default:
+                return async () => {};
+        }
+    };
 
     return (
         <li>
             <div>
-                {node.children?.length > 0 && (
+                <div className={styles.flexContainer}>
                     <button
+                        className={`outline contrast no-border ${styles.normalChild} ${styles.flexContainer}`}
                         onClick={() => setIsExpanded(!isExpanded)}
                         aria-label={isExpanded ? "Collapse" : "Expand"}
                     >
-                        {isExpanded ? "v" : ">"}
+                        {isExpanded ? <FaCaretDown /> : <FaCaretRight />}
                     </button>
+
+                    <span className={styles.expandingChild}>{node.name}</span>
+
+                    <div
+                        className={`${styles.normalChild} ${styles.flexContainer}`}
+                    >
+                        <button
+                            className={`outline contrast no-border ${styles.flexContainer}`}
+                            onClick={() => setDialogType("add")}
+                        >
+                            <FaPlus />
+                        </button>
+
+                        {!isRoot && (
+                            <>
+                                <button
+                                    className={`outline contrast no-border ${styles.flexContainer}`}
+                                    onClick={() => setDialogType("rename")}
+                                >
+                                    <FaEdit />
+                                </button>
+                                <button
+                                    className={`outline contrast no-border ${styles.flexContainer} pico-color-red`}
+                                    onClick={() => setDialogType("delete")}
+                                >
+                                    <FaTrash />
+                                </button>
+                            </>
+                        )}
+                    </div>
+                </div>
+
+                {isExpanded && node.children?.length > 0 && (
+                    <ul>
+                        {node.children.map((child) => (
+                            <TreeItem
+                                key={child.id}
+                                treeName={treeName}
+                                node={child}
+                                onAddChild={onAddChild}
+                                onRename={onRename}
+                                onDelete={onDelete}
+                            />
+                        ))}
+                    </ul>
                 )}
 
-                <span>{node.name}</span>
-
-                <div>
-                    <button
-                        onClick={() =>
-                            onAddChild(node.id, node.name + "_child")
+                {dialogType && (
+                    <Dialog
+                        isOpen={!!dialogType}
+                        type={dialogType}
+                        nodeName={node.name}
+                        onClose={() => setDialogType(null)}
+                        onConfirm={getDialogHandler()}
+                        initialValue={dialogType === "rename" ? node.name : ""}
+                        hasChildren={
+                            node.children?.length > 0 && dialogType === "delete"
                         }
-                    >
-                        add
-                    </button>
-                    <button
-                        onClick={() =>
-                            onRename(
-                                treeName,
-                                node.id,
-                                node.name + `_renamedAt_${Date.now()}`,
-                            )
-                        }
-                    >
-                        rename
-                    </button>
-                    <button onClick={() => onDelete(treeName, node.id)}>
-                        delete
-                    </button>
-                </div>
+                    ></Dialog>
+                )}
             </div>
-
-            {isExpanded && node.children?.length > 0 && (
-                <ul>
-                    {node.children.map((child) => (
-                        <TreeItem
-                            key={child.id}
-                            treeName={treeName}
-                            node={child}
-                            onAddChild={onAddChild}
-                            onRename={onRename}
-                            onDelete={onDelete}
-                        />
-                    ))}
-                </ul>
-            )}
         </li>
     );
 };
