@@ -241,7 +241,7 @@ const TreeView = ({ treeName }: TreeViewProps) => {
     }, [treeName]);
 
     if (!treeData) {
-        if (!loading) {
+        if (loading) {
             return <div>Loading...</div>;
         } else if (error) {
             return <div>{error}</div>;
