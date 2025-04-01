@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import TreeItem from "@/components/TreeItem";
 import { TreeNode } from "@/types/tree";
 import { treeService } from "@/services/treeService";
+import styles from "@/components/flex.module.scss";
 
 interface TreeViewProps {
     treeName: string;
@@ -129,11 +130,9 @@ const TreeView = ({ treeName }: TreeViewProps) => {
 
     const fetchTree = useCallback(async () => {
         setLoading(true);
-        setError(null);
         try {
             const { error, tree } = await treeService.getTree(treeName);
             if (error) {
-                console.error("Failed to fetch tree:", error);
                 setError("Failed to load tree data. Please try again later.");
             } else {
                 setTreeData(tree!);
@@ -169,6 +168,10 @@ const TreeView = ({ treeName }: TreeViewProps) => {
                     parentNodeId,
                     nodeName,
                 );
+                if (error) {
+                    setError(error);
+                }
+
                 fetchTree();
             }
         },
@@ -198,6 +201,7 @@ const TreeView = ({ treeName }: TreeViewProps) => {
                     nodeToDelete,
                 );
                 if (error) {
+                    setError(error);
                     fetchTree();
                 }
             }
@@ -227,6 +231,7 @@ const TreeView = ({ treeName }: TreeViewProps) => {
                     newNodeName,
                 );
                 if (error) {
+                    setError(error);
                     fetchTree();
                 }
             }
@@ -240,23 +245,35 @@ const TreeView = ({ treeName }: TreeViewProps) => {
 
     if (!treeData) {
         if (loading) {
-            return <div>Loading...</div>;
-        } else if (error) {
-            return <div>{error}</div>;
+            return <article aria-busy="true"></article>;
         } else {
-            return <div>Unexpected error loading</div>;
+            return (
+                <article className="pico-color-red">
+                    Unexpected error loading
+                </article>
+            );
         }
     }
 
     return (
-        <TreeItem
-            treeName={treeName}
-            node={treeData}
-            onAddChild={handleAddChild}
-            onRename={handleRename}
-            onDelete={handleDelete}
-            isRoot
-        />
+        <>
+            {error && (
+                <article className={`pico-color-red ${styles.flexContainer}`}>
+                    <span className={`${styles.expandingChild}`}>{error}</span>
+                    <button onClick={() => setError(null)}>Clear Error</button>
+                </article>
+            )}
+            <article>
+                <TreeItem
+                    treeName={treeName}
+                    node={treeData}
+                    onAddChild={handleAddChild}
+                    onRename={handleRename}
+                    onDelete={handleDelete}
+                    isRoot
+                />
+            </article>
+        </>
     );
 };
 
