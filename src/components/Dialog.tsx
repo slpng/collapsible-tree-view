@@ -58,6 +58,12 @@ const Dialog = ({
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const handleSubmit = async (e?: React.FormEvent) => {
+    const handleClickOverlay: MouseEventHandler<HTMLDialogElement> =
+        useCallback((event: MouseEvent<HTMLDialogElement>) => {
+            if (event.target === event.currentTarget) {
+                onClose();
+            }
+        }, []);
         if (e) e.preventDefault();
 
         if ((type === "add" || type === "rename") && !value.trim()) {
@@ -78,7 +84,7 @@ const Dialog = ({
         }
     };
     return (
-        <dialog open={true}>
+        <dialog open={true} onClick={handleClickOverlay}>
             <article>
                 <header>
                     <button aria-label="Close" rel="prev" onClick={onClose} />
