@@ -8,7 +8,7 @@ import {
     FaPlus,
     FaTrash,
 } from "react-icons/fa";
-import styles from "@/components/TreeItem.module.scss";
+import styles from "@/components/flex.module.scss";
 
 interface TreeItemProps {
     treeName: string;
@@ -73,7 +73,7 @@ const TreeItem = ({
             <div>
                 <div className={styles.flexContainer}>
                     <button
-                        className={`outline contrast no-border ${styles.normalChild} ${styles.flexContainer}`}
+                        className={`outline contrast no-border ${styles.flexContainer}`}
                         onClick={() => setIsExpanded(!isExpanded)}
                         aria-label={isExpanded ? "Collapse" : "Expand"}
                     >
@@ -84,9 +84,7 @@ const TreeItem = ({
                         [{node.id}] {node.name}
                     </span>
 
-                    <div
-                        className={`${styles.normalChild} ${styles.flexContainer}`}
-                    >
+                    <div className={`${styles.flexContainer}`}>
                         <button
                             className={`outline contrast no-border ${styles.flexContainer}`}
                             onClick={() => setDialogType("add")}
