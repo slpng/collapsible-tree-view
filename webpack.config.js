@@ -2,7 +2,6 @@ import HtmlWebpackPlugin from "html-webpack-plugin";
 import webpack from "webpack";
 import path from "path";
 import { fileURLToPath } from "url";
-import { FaAutoprefixer } from "react-icons/fa";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -57,6 +56,7 @@ export default () => {
                 template: "./public/index.html",
             }),
         ],
+        devtool: "source-map",
         devServer: {
             static: path.join(__dirname, "dist"),
             compress: true,
