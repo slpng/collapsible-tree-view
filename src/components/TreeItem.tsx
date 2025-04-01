@@ -1,7 +1,6 @@
 import Dialog, { DialogType } from "@/components/Dialog";
 import { TreeNode } from "@/types/tree";
-import { getHooks } from "html-webpack-plugin";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import {
     FaCaretDown,
     FaCaretRight,
@@ -35,22 +34,28 @@ const TreeItem = ({
     const [isExpanded, setIsExpanded] = useState(false);
     const [dialogType, setDialogType] = useState<DialogType | null>(null);
 
-    const handleAddChild = async (nodeName?: string) => {
-        if (!nodeName) return;
-        await onAddChild(node.id, nodeName);
-        setIsExpanded(true);
-    };
+    const handleAddChild = useCallback(
+        async (nodeName?: string) => {
+            if (!nodeName) return;
+            await onAddChild(node.id, nodeName);
+            setIsExpanded(true);
+        },
+        [node.id, onAddChild],
+    );
 
-    const handleRename = async (newName?: string) => {
-        if (!newName) return;
-        await onRename(treeName, node.id, newName);
-    };
+    const handleRename = useCallback(
+        async (newName?: string) => {
+            if (!newName) return;
+            await onRename(treeName, node.id, newName);
+        },
+        [treeName, node.id, onRename],
+    );
 
-    const handleDelete = async () => {
+    const handleDelete = useCallback(async () => {
         await onDelete(treeName, node.id);
-    };
+    }, [treeName, node.id, onDelete]);
 
-    const getDialogHandler = () => {
+    const getDialogHandler = useCallback(() => {
         switch (dialogType) {
             case "add":
                 return handleAddChild;
@@ -61,7 +66,7 @@ const TreeItem = ({
             default:
                 return async () => {};
         }
-    };
+    }, [dialogType, handleAddChild, handleRename, handleDelete]);
 
     return (
         <li>

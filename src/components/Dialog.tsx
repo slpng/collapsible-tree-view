@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { MouseEvent, MouseEventHandler, useCallback, useState } from "react";
 
 const titles = {
     add: () => "Add new node",
@@ -57,32 +57,40 @@ const Dialog = ({
     const [value, setValue] = useState(initialValue);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const handleSubmit = async (e?: React.FormEvent) => {
     const handleClickOverlay: MouseEventHandler<HTMLDialogElement> =
-        useCallback((event: MouseEvent<HTMLDialogElement>) => {
-            if (event.target === event.currentTarget) {
+        useCallback(
+            (event: MouseEvent<HTMLDialogElement>) => {
+                if (event.target === event.currentTarget) {
+                    onClose();
+                }
+            },
+            [onClose],
+        );
+
+    const handleSubmit = useCallback(
+        async (e?: React.FormEvent) => {
+            if (e) e.preventDefault();
+
+            if ((type === "add" || type === "rename") && !value.trim()) {
+                return;
+            }
+
+            setIsSubmitting(true);
+            try {
+                if (type === "delete") {
+                    await onConfirm();
+                } else {
+                    await onConfirm(value);
+                }
+                if (type !== "delete") setValue(initialValue);
+            } finally {
+                setIsSubmitting(false);
                 onClose();
             }
-        }, []);
-        if (e) e.preventDefault();
+        },
+        [onClose, onConfirm, initialValue, type, value],
+    );
 
-        if ((type === "add" || type === "rename") && !value.trim()) {
-            return;
-        }
-
-        setIsSubmitting(true);
-        try {
-            if (type === "delete") {
-                await onConfirm();
-            } else {
-                await onConfirm(value);
-            }
-            if (type !== "delete") setValue(initialValue);
-        } finally {
-            setIsSubmitting(false);
-            onClose();
-        }
-    };
     return (
         <dialog open={true} onClick={handleClickOverlay}>
             <article>
