@@ -31,7 +31,7 @@ const TreeItem = ({
     treeName,
     isRoot = false,
 }: TreeItemProps) => {
-    const [isExpanded, setIsExpanded] = useState(false);
+    const [isExpanded, setIsExpanded] = useState(true);
     const [dialogType, setDialogType] = useState<DialogType | null>(null);
 
     const handleAddChild = useCallback(
