@@ -5,6 +5,5 @@ export interface TreeNode {
 }
 
 export interface TreeOperationResponse {
-    success: boolean;
-    error?: string;
+    error: string | null;
 }

@@ -7,16 +7,32 @@ export interface AddNodeResponse extends TreeOperationResponse {
     nodeId?: number;
 }
 
+export interface GetTreeResponse extends TreeOperationResponse {
+    tree?: TreeNode;
+}
+
 export const treeService = {
-    getTree: async (treeName: string): Promise<TreeNode> => {
+    getTree: async (treeName: string): Promise<GetTreeResponse> => {
         try {
             const response = await axios.post(
                 `${API_BASE_URL}/api.user.tree.get?treeName=${treeName}`,
             );
-            return response.data;
-        } catch (error) {
-            console.error("Failed to fetch tree:", error);
-            throw new Error("Failed to fetch tree data");
+            if (response.status === 200) {
+                return {
+                    tree: response.data,
+                    error: null,
+                };
+            }
+
+            return {
+                error: response.data?.message || "Failed to get tree via API",
+            };
+        } catch (error: any) {
+            return {
+                error:
+                    error.response?.data?.message ||
+                    "Failed to get tree due to an unexpected error",
+            };
         }
     },
 
@@ -34,16 +50,21 @@ export const treeService = {
             const response = await axios.post(
                 `${API_BASE_URL}/api.user.tree.node.create?${props.toString()}`,
             );
+            if (response.status === 200) {
+                return {
+                    nodeId: response.data?.nodeId,
+                    error: null,
+                };
+            }
 
             return {
-                success: response.status === 200,
-                nodeId: response.data?.nodeId,
+                error: response.data?.message || "Failed to add node via API",
             };
         } catch (error: any) {
-            console.error("Failed to add node:", error);
             return {
-                success: false,
-                error: error.response?.data?.message || "Failed to add node",
+                error:
+                    error.response?.data?.message ||
+                    "Failed to add node due to an unexpected error",
             };
         }
     },
@@ -61,12 +82,18 @@ export const treeService = {
                 `${API_BASE_URL}/api.user.tree.node.delete?${props.toString()}`,
             );
 
-            return { success: response.status === 200 };
-        } catch (error: any) {
-            console.error("Failed to delete node:", error);
             return {
-                success: false,
-                error: error.response?.data?.message || "Failed to delete node",
+                error:
+                    response.status === 200
+                        ? null
+                        : response.data?.message ||
+                          "Failed to delete node via API",
+            };
+        } catch (error: any) {
+            return {
+                error:
+                    error.response?.data?.message ||
+                    "Failed to delete node due to an unexpected error",
             };
         }
     },
@@ -86,12 +113,18 @@ export const treeService = {
                 `${API_BASE_URL}/api.user.tree.node.rename?${props.toString()}`,
             );
 
-            return { success: response.status === 200 };
-        } catch (error: any) {
-            console.error("Failed to rename node:", error);
             return {
-                success: false,
-                error: error.response?.data?.message || "Failed to rename node",
+                error:
+                    response.status === 200
+                        ? null
+                        : response.data?.message ||
+                          "Failed to rename node via API",
+            };
+        } catch (error: any) {
+            return {
+                error:
+                    error.response?.data?.message ||
+                    "Failed to rename node due to an unexpected error",
             };
         }
     },
@@ -107,7 +140,7 @@ export const treeService = {
                         treeName,
                         child,
                     );
-                    if (!result.success) {
+                    if (result.error) {
                         return result;
                     }
                 }
@@ -115,12 +148,10 @@ export const treeService = {
 
             return await treeService.deleteNode(treeName, node.id);
         } catch (error: any) {
-            console.error("Failed to delete node recursively:", error);
             return {
-                success: false,
                 error:
                     error.response?.data?.message ||
-                    "Failed to delete node recursively",
+                    "Failed to delete node recursively due to an unexpected error",
             };
         }
     },

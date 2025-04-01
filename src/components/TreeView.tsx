@@ -133,11 +133,13 @@ const TreeView = ({ treeName }: TreeViewProps) => {
         setLoading(true);
         setError(null);
         try {
-            const data = await treeService.getTree(treeName);
-            setTreeData(data);
-        } catch (error) {
-            console.error("Failed to fetch tree:", error);
-            setError("Failed to load tree data. Please try again later.");
+            const { error, tree } = await treeService.getTree(treeName);
+            if (error) {
+                console.error("Failed to fetch tree:", error);
+                setError("Failed to load tree data. Please try again later.");
+            } else {
+                setTreeData(tree!);
+            }
         } finally {
             setLoading(false);
         }
@@ -164,21 +166,12 @@ const TreeView = ({ treeName }: TreeViewProps) => {
             if (added) {
                 setTreeData(updatedTree[0]);
 
-                try {
-                    const result = await treeService.addNode(
-                        treeName,
-                        parentNodeId,
-                        nodeName,
-                    );
-
-                    if (result.success) {
-                        await fetchTree();
-                    } else {
-                        await fetchTree();
-                    }
-                } catch (error) {
-                    await fetchTree();
-                }
+                const { error } = await treeService.addNode(
+                    treeName,
+                    parentNodeId,
+                    nodeName,
+                );
+                fetchTree();
             }
         },
         [treeName, treeData, fetchTree],
@@ -202,16 +195,12 @@ const TreeView = ({ treeName }: TreeViewProps) => {
             if (removed) {
                 setTreeData(updatedTree[0]);
 
-                try {
-                    const result = await treeService.deleteNodeRecursive(
-                        treeName,
-                        nodeToDelete,
-                    );
-                    if (!result.success) {
-                        await fetchTree();
-                    }
-                } catch (error) {
-                    await fetchTree();
+                const { error } = await treeService.deleteNodeRecursive(
+                    treeName,
+                    nodeToDelete,
+                );
+                if (error) {
+                    fetchTree();
                 }
             }
         },
@@ -234,18 +223,13 @@ const TreeView = ({ treeName }: TreeViewProps) => {
             if (updated) {
                 setTreeData(updatedTree[0]);
 
-                try {
-                    const result = await treeService.renameNode(
-                        treeName,
-                        nodeId,
-                        newNodeName,
-                    );
-
-                    if (!result.success) {
-                        await fetchTree();
-                    }
-                } catch (error) {
-                    await fetchTree();
+                const { error } = await treeService.renameNode(
+                    treeName,
+                    nodeId,
+                    newNodeName,
+                );
+                if (error) {
+                    fetchTree();
                 }
             }
         },
@@ -256,7 +240,15 @@ const TreeView = ({ treeName }: TreeViewProps) => {
         fetchTree();
     }, [treeName]);
 
-    if (!treeData) return <div>Loading...</div>;
+    if (!treeData) {
+        if (!loading) {
+            return <div>Loading...</div>;
+        } else if (error) {
+            return <div>{error}</div>;
+        } else {
+            return <div>Unexpected error loading</div>;
+        }
+    }
 
     return (
         <TreeItem
