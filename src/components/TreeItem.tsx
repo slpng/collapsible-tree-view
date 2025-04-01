@@ -80,7 +80,9 @@ const TreeItem = ({
                         {isExpanded ? <FaCaretDown /> : <FaCaretRight />}
                     </button>
 
-                    <span className={styles.expandingChild}>{node.name}</span>
+                    <span className={styles.expandingChild}>
+                        [{node.id}] {node.name}
+                    </span>
 
                     <div
                         className={`${styles.normalChild} ${styles.flexContainer}`}
