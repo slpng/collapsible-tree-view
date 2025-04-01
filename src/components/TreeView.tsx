@@ -264,14 +264,16 @@ const TreeView = ({ treeName }: TreeViewProps) => {
                 </article>
             )}
             <article>
-                <TreeItem
-                    treeName={treeName}
-                    node={treeData}
-                    onAddChild={handleAddChild}
-                    onRename={handleRename}
-                    onDelete={handleDelete}
-                    isRoot
-                />
+                <ul>
+                    <TreeItem
+                        treeName={treeName}
+                        node={treeData}
+                        onAddChild={handleAddChild}
+                        onRename={handleRename}
+                        onDelete={handleDelete}
+                        isRoot
+                    />
+                </ul>
             </article>
         </>
     );
