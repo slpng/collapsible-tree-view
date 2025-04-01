@@ -1,9 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
-import axios from "axios";
 import TreeItem from "@/components/TreeItem";
 import { TreeNode } from "@/types/tree";
 import { treeService } from "@/services/treeService";
-import Dialog from "@/components/Dialog";
 
 interface TreeViewProps {
     treeName: string;
